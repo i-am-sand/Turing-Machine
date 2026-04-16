@@ -8,10 +8,14 @@ CONFIG += c++17
 
 SOURCES += \
     main.cpp \
-    mainwindow.cpp
+    mainwindow.cpp \
+    turingmachine.cpp \
+    tapewidget.cpp
 
 HEADERS += \
-    mainwindow.h
+    mainwindow.h \
+    turingmachine.h \
+    tapewidget.h
 
 FORMS += \
     mainwindow.ui
