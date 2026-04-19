@@ -75,7 +75,7 @@ bool TuringMachine::step() {
         ++m_headPos;
     m_currentState = cmd.nextState;
     emit machineChanged();
-    if (m_currentState.trimmed().toLower() == "halt") {
+    if (m_currentState.trimmed().toLower() == "!") {
         emit machineStopped("Машина остановилась.");
         return false;
     }
@@ -127,7 +127,7 @@ void TuringMachine::setRunning(bool value) {
 
 bool TuringMachine::hasAnyHaltCommand() const {
     for (auto it = m_program.begin(); it != m_program.end(); ++it) {
-        if (it.value().isValid && it.value().nextState.trimmed().toLower() == "halt")
+        if (it.value().isValid && it.value().nextState.trimmed().toLower() == "!")
             return true;
     }
     return false;

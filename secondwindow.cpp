@@ -163,6 +163,12 @@ void SecondWindow::on_pushButtonSpeedDown_clicked()
     updateUi();
 }
 
+bool SecondWindow::isMoveCommand(const QString &s) const
+{
+    QString t = s.trimmed().toUpper();
+    return t == "L" || t == "R" || t == "S";
+}
+
 QStringList SecondWindow::generateStates(int count) const
 {
     QStringList result;
@@ -227,33 +233,89 @@ void SecondWindow::rebuildProgramTable()
     ui->tableWidgetProgram->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 }
 
-bool SecondWindow::parseCommandText(const QString &text, Command &cmd) const
+bool SecondWindow::parseCommandText(const QString &text,
+                                    const QString &currentState,
+                                    QChar readSymbol,
+                                    Command &cmd) const
 {
     QString trimmed = text.trimmed();
     if (trimmed.isEmpty())
         return false;
 
-    QStringList parts = trimmed.split(',', Qt::SkipEmptyParts);
-    if (parts.size() != 3)
+    QStringList parts = trimmed.split(',', Qt::KeepEmptyParts);
+    for (QString &part : parts)
+        part = part.trimmed();
+
+    cmd.writeSymbol = readSymbol;
+    cmd.move = 'S';
+    cmd.nextState = currentState;
+    cmd.isValid = false;
+
+    if (parts.size() == 1)
+    {
+        if (isMoveCommand(parts[0]))
+        {
+            cmd.move = parts[0].trimmed().toUpper()[0];
+            cmd.isValid = true;
+            return true;
+        }
+        cmd.nextState = parts[0];
+        cmd.isValid = !cmd.nextState.isEmpty();
+        return cmd.isValid;
+    }
+
+    if (parts.size() == 2)
+    {
+        if (isMoveCommand(parts[0]))
+        {
+            cmd.move = parts[0].trimmed().toUpper()[0];
+            cmd.nextState = parts[1].isEmpty() ? currentState : parts[1];
+            cmd.isValid = true;
+            return true;
+        }
+
+        if (parts[0].size() == 1 && isMoveCommand(parts[1]))
+        {
+            cmd.writeSymbol = parts[0][0];
+            cmd.move = parts[1].trimmed().toUpper()[0];
+            cmd.nextState = currentState;
+            cmd.isValid = true;
+            return true;
+        }
+
+        if (parts[0].size() == 1)
+        {
+            cmd.writeSymbol = parts[0][0];
+            cmd.move = 'S';
+            cmd.nextState = parts[1].isEmpty() ? currentState : parts[1];
+            cmd.isValid = true;
+            return true;
+        }
+
         return false;
+    }
 
-    QString writePart = parts[0].trimmed();
-    QString movePart = parts[1].trimmed().toUpper();
-    QString nextPart = parts[2].trimmed();
+    if (parts.size() == 3)
+    {
+        QString writePart = parts[0];
+        QString movePart  = parts[1].toUpper();
+        QString nextPart  = parts[2];
 
-    if (writePart.size() != 1)
-        return false;
+        if (writePart.size() != 1)
+            return false;
 
-    if (movePart != "L" && movePart != "R" && movePart != "S")
-        return false;
+        if (!isMoveCommand(movePart))
+            return false;
 
-    cmd.writeSymbol = writePart[0];
-    cmd.move = movePart[0];
-    cmd.nextState = nextPart;
-    cmd.isValid = true;
-    return true;
+        cmd.writeSymbol = writePart[0];
+        cmd.move = movePart[0];
+        cmd.nextState = nextPart.isEmpty() ? currentState : nextPart;
+        cmd.isValid = true;
+        return true;
+    }
+
+    return false;
 }
-
 void SecondWindow::loadProgramFromTable()
 {
     m_machine->clearProgram();
@@ -278,7 +340,7 @@ void SecondWindow::loadProgramFromTable()
                 continue;
 
             Command cmd;
-            if (!parseCommandText(text, cmd))
+            if (!parseCommandText(text, state, alphabet[col], cmd))
             {
                 QMessageBox::warning(this, "Ошибка",
                                      QString("Некорректная команда в строке %1, столбце %2")

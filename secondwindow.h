@@ -37,12 +37,16 @@ private slots:
 private:
     void rebuildProgramTable();
     void loadProgramFromTable();
-    bool parseCommandText(const QString &text, Command &cmd) const;
+    bool parseCommandText(const QString &text,
+                          const QString &currentState,
+                          QChar readSymbol,
+                          Command &cmd) const;
     QStringList generateStates(int count) const;
     QList<QChar> sortedAlphabetList() const;
     void highlightCurrentStateRow();
     void updateTapeLabels();
     void setEditingEnabled(bool enabled);
+    bool isMoveCommand(const QString &s) const;
 
 private:
     Ui::SecondWindow *ui;
