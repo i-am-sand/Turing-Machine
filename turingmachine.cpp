@@ -68,6 +68,7 @@ bool TuringMachine::step() {
         return false;
     }
     Command cmd = m_program[key];
+    m_tape[m_headPos] = cmd.writeSymbol;
     if (cmd.move == 'L')
         --m_headPos;
     else if (cmd.move == 'R')

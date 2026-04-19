@@ -9,16 +9,19 @@ CONFIG += c++17
 SOURCES += \
     main.cpp \
     mainwindow.cpp \
+    secondwindow.cpp \
     turingmachine.cpp \
     tapewidget.cpp
 
 HEADERS += \
     mainwindow.h \
+    secondwindow.h \
     turingmachine.h \
     tapewidget.h
 
 FORMS += \
-    mainwindow.ui
+    mainwindow.ui \
+    secondwindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
