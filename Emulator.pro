@@ -10,11 +10,13 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     secondwindow.cpp \
+    tapewidget.cpp \
     turingmachine.cpp
 
 HEADERS += \
     mainwindow.h \
     secondwindow.h \
+    tapewidget.h \
     turingmachine.h
 
 FORMS += \

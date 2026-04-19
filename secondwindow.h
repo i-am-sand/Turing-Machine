@@ -4,11 +4,15 @@
 #include <QDialog>
 #include <QSet>
 #include <QTimer>
+#include <QPropertyAnimation>
+#include <QEasingCurve>
 #include "turingmachine.h"
 
 namespace Ui {
 class SecondWindow;
 }
+
+class TapeWidget;
 
 class SecondWindow : public QDialog
 {
@@ -47,6 +51,9 @@ private:
     void updateTapeLabels();
     void setEditingEnabled(bool enabled);
     bool isMoveCommand(const QString &s) const;
+    void updateUiTextOnly();
+    void animateCaret(int direction);
+    void onCaretAnimationFinished();
 
 private:
     Ui::SecondWindow *ui;
@@ -55,6 +62,18 @@ private:
 
     int m_stateCount = 3;
     int m_stepIntervalMs = 500;
+    TapeWidget *m_tapeWidget;
+    QPropertyAnimation *m_caretAnimation = nullptr;
+    int m_lastAnimatedMove = 0;
+
+    int m_viewOffset = 0;
+    int m_caretScreenIndex = 5;
+    int m_pendingDirection = 0;
+    bool m_stepInProgress = false;
+
+    void placeCaretOverCell(int index);
+    void animateCaretToCell(int newIndex);
+    void finishStepAnimation();
 };
 
 

@@ -6,9 +6,21 @@ SecondWindow::SecondWindow(QWidget *parent)
     : QDialog(parent)
     , ui(new Ui::SecondWindow)
     , m_machine(new TuringMachine(this))
-    ,m_timer(new QTimer(this))
+    , m_timer(new QTimer(this))
+    , m_caretAnimation(nullptr)
 {
     ui->setupUi(this);
+
+    m_caretAnimation = new QPropertyAnimation(ui->labelHeadArrow, "pos", this);
+    m_caretAnimation->setDuration(180);
+    m_caretAnimation->setEasingCurve(QEasingCurve::Linear);
+
+    connect(m_caretAnimation, &QPropertyAnimation::finished,
+            this, &SecondWindow::finishStepAnimation);
+
+    QPoint p = ui->labelHeadArrow->pos();
+    p.setX(ui->labelCell5->x() + ui->labelCell5->width() / 2 - ui->labelHeadArrow->width() / 2);
+    ui->labelHeadArrow->move(p);
 
     ui->lineEditInputWord->setEnabled(false);
     ui->pushButtonSetWord->setEnabled(false);
@@ -37,7 +49,7 @@ SecondWindow::SecondWindow(QWidget *parent)
     });
 
     connect(m_timer, &QTimer::timeout, this, &SecondWindow::onAutoStep);
-    connect(m_machine, &TuringMachine::machineChanged, this, &SecondWindow::updateUi);
+    connect(m_machine, &TuringMachine::machineChanged, this, &SecondWindow::updateUiTextOnly);
     connect(m_machine, &TuringMachine::machineStopped, this, &SecondWindow::onMachineStopped);
 
     updateUi();
@@ -83,17 +95,53 @@ void SecondWindow::on_pushButtonSetWord_clicked()
                              "Во входной строке есть символы, которых нет в алфавите ленты.");
         return;
     }
+
+    m_viewOffset = m_machine->headPosition() - 5;
+    m_caretScreenIndex = 5;
+    updateTapeLabels();
+    placeCaretOverCell(m_caretScreenIndex);
+
     ui->pushButtonStart->setEnabled(true);
     ui->pushButtonStep->setEnabled(true);
 
-    updateUi();
+    updateUiTextOnly();
 }
 
 void SecondWindow::on_pushButtonStep_clicked()
 {
+    if (m_stepInProgress)
+        return;
+
     loadProgramFromTable();
-    m_machine->step();
-    updateUi();
+
+    bool ok = m_machine->step();
+    if (!ok)
+    {
+        updateUiTextOnly();
+        updateTapeLabels();
+        return;
+    }
+
+    updateUiTextOnly();
+
+    QChar move = m_machine->lastMove();
+
+    if (move == 'R')
+    {
+        m_pendingDirection = +1;
+        m_stepInProgress = true;
+        animateCaretToCell(m_caretScreenIndex + 1);
+    }
+    else if (move == 'L')
+    {
+        m_pendingDirection = -1;
+        m_stepInProgress = true;
+        animateCaretToCell(m_caretScreenIndex - 1);
+    }
+    else
+    {
+        updateTapeLabels();
+    }
 }
 
 void SecondWindow::on_pushButtonStart_clicked()
@@ -124,21 +172,60 @@ void SecondWindow::on_pushButtonReset_clicked()
 {
     m_timer->stop();
     m_machine->setRunning(false);
+    m_stepInProgress = false;
+    m_pendingDirection = 0;
+
+    m_caretAnimation->stop();
+
     m_machine->reset();
+
+    m_viewOffset = m_machine->headPosition() - 5;
+    m_caretScreenIndex = 5;
+
+    updateTapeLabels();
+    placeCaretOverCell(m_caretScreenIndex);
+
     setEditingEnabled(true);
-    updateUi();
+    updateUiTextOnly();
 }
 
 void SecondWindow::onAutoStep()
 {
-    if (!m_machine->step())
+    if (m_stepInProgress)
+        return;
+
+    bool ok = m_machine->step();
+
+    if (!ok)
     {
         m_timer->stop();
         m_machine->setRunning(false);
         setEditingEnabled(true);
+        updateUiTextOnly();
+        updateTapeLabels();
+        return;
     }
 
-    updateUi();
+    updateUiTextOnly();
+
+    QChar move = m_machine->lastMove();
+
+    if (move == 'R')
+    {
+        m_pendingDirection = +1;
+        m_stepInProgress = true;
+        animateCaretToCell(m_caretScreenIndex + 1);
+    }
+    else if (move == 'L')
+    {
+        m_pendingDirection = -1;
+        m_stepInProgress = true;
+        animateCaretToCell(m_caretScreenIndex - 1);
+    }
+    else
+    {
+        updateTapeLabels();
+    }
 }
 
 void SecondWindow::on_pushButtonSpeedUp_clicked()
@@ -370,22 +457,26 @@ void SecondWindow::updateTapeLabels()
         ui->labelCell9, ui->labelCell10
     };
 
-    int head = m_machine->headPosition();
-
     for (int i = 0; i < 11; ++i)
     {
-        int tapeIndex = head + (i - 5);
+        int tapeIndex = m_viewOffset + i;
         labels[i]->setText(QString(m_machine->symbolAt(tapeIndex)));
+
+        if (i == m_caretScreenIndex)
+        {
+            labels[i]->setStyleSheet("background-color: rgb(180, 220, 255); color: black; border: 2px solid blue;");
+        }
+        else
+        {
+            labels[i]->setStyleSheet("background-color: white; color: black; border: 1px solid black;");
+        }
     }
 }
 
 void SecondWindow::updateUi()
 {
-    ui->labelCurrentState->setText("Состояние: " + m_machine->currentState());
-    ui->labelSpeed->setText("Скорость: " + QString::number(m_stepIntervalMs) + " мс");
-
+    updateUiTextOnly();
     updateTapeLabels();
-    highlightCurrentStateRow();
 }
 
 void SecondWindow::highlightCurrentStateRow()
@@ -432,10 +523,105 @@ void SecondWindow::onMachineStopped(const QString &reason)
 {
     m_timer->stop();
     m_machine->setRunning(false);
+    m_stepInProgress = false;
+    m_pendingDirection = 0;
+
+    m_caretAnimation->stop();
+
     setEditingEnabled(true);
-    updateUi();
+    updateUiTextOnly();
+    updateTapeLabels();
 
     QMessageBox::information(this, "Остановка", reason);
 }
 
+void SecondWindow::updateUiTextOnly()
+{
+    ui->labelCurrentState->setText("Состояние: " + m_machine->currentState());
+    ui->labelSpeed->setText("Скорость: " + QString::number(m_stepIntervalMs) + " мс");
+    highlightCurrentStateRow();
+}
+
+
+void SecondWindow::onCaretAnimationFinished()
+{
+    updateTapeLabels();
+    QPoint p = ui->labelHeadArrow->pos();
+    p.setX(ui->labelCell5->x() + ui->labelCell5->width() / 2 - ui->labelHeadArrow->width() / 2);
+    ui->labelHeadArrow->move(p);
+
+    updateUiTextOnly();
+}
+
+void SecondWindow::placeCaretOverCell(int index)
+{
+    QLabel* labels[11] = {
+        ui->labelCell0, ui->labelCell1, ui->labelCell2,
+        ui->labelCell3, ui->labelCell4, ui->labelCell5,
+        ui->labelCell6, ui->labelCell7, ui->labelCell8,
+        ui->labelCell9, ui->labelCell10
+    };
+
+    QLabel *cell = labels[index];
+
+    QPoint cellTopLeft = cell->mapTo(ui->frameTape, QPoint(0, 0));
+
+    QPoint p = ui->labelHeadArrow->pos();
+    p.setX(cellTopLeft.x() + cell->width() / 2 - ui->labelHeadArrow->width() / 2);
+    ui->labelHeadArrow->move(p);
+}
+
+void SecondWindow::animateCaretToCell(int newIndex)
+{
+    QLabel* labels[11] = {
+        ui->labelCell0, ui->labelCell1, ui->labelCell2,
+        ui->labelCell3, ui->labelCell4, ui->labelCell5,
+        ui->labelCell6, ui->labelCell7, ui->labelCell8,
+        ui->labelCell9, ui->labelCell10
+    };
+
+    QLabel *targetCell = labels[newIndex];
+
+    QPoint targetTopLeft = targetCell->mapTo(ui->frameTape, QPoint(0, 0));
+
+    QPoint startPos = ui->labelHeadArrow->pos();
+    QPoint endPos = startPos;
+    endPos.setX(targetTopLeft.x() + targetCell->width() / 2 - ui->labelHeadArrow->width() / 2);
+
+    m_caretAnimation->stop();
+    m_caretAnimation->setStartValue(startPos);
+    m_caretAnimation->setEndValue(endPos);
+    m_caretAnimation->start();
+}
+
+void SecondWindow::finishStepAnimation()
+{
+    m_caretScreenIndex += m_pendingDirection;
+
+    int shift = (11 * 2) / 3;
+    if (m_caretScreenIndex >= 10)
+    {
+        m_viewOffset += shift;
+        m_caretScreenIndex -= shift;
+        updateTapeLabels();
+        placeCaretOverCell(m_caretScreenIndex);
+    }
+    else if (m_caretScreenIndex <= 0)
+    {
+        m_viewOffset -= shift;
+        m_caretScreenIndex += shift;
+        updateTapeLabels();
+        placeCaretOverCell(m_caretScreenIndex);
+    }
+    else
+    {
+        placeCaretOverCell(m_caretScreenIndex);
+    }
+
+    m_pendingDirection = 0;
+    m_stepInProgress = false;
+
+    updateUiTextOnly();
+    updateTapeLabels();
+}
 

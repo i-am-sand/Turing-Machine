@@ -47,6 +47,8 @@ public:
 
     bool hasAnyHaltCommand() const;
 
+    QChar lastMove() const;
+
 signals:
     void machineChanged();
     void machineStopped(const QString &reason);
@@ -74,6 +76,8 @@ private:
 
     QChar m_blank = QChar(0x039B);
     bool m_running = false;
+
+    QChar m_lastMove = 'S';
 };
 
 #endif

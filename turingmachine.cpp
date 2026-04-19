@@ -68,6 +68,7 @@ bool TuringMachine::step() {
         return false;
     }
     Command cmd = m_program[key];
+    m_lastMove = cmd.move;
     m_tape[m_headPos] = cmd.writeSymbol;
     if (cmd.move == 'L')
         --m_headPos;
@@ -135,4 +136,9 @@ bool TuringMachine::hasAnyHaltCommand() const {
 
 QString TuringMachine::makeKey(const QString &state, QChar readSymbol) const {
     return state + "|" + readSymbol;
+}
+
+QChar TuringMachine::lastMove() const
+{
+    return m_lastMove;
 }
