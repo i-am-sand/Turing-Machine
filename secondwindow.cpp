@@ -12,6 +12,12 @@ SecondWindow::SecondWindow(QWidget *parent)
     // Создание элементов интерфейса
     ui->setupUi(this);
 
+    // Установка флагов для сворачивания окна и открытия на весь экран
+    setWindowFlags(Qt::Window |
+                   Qt::WindowMinimizeButtonHint |
+                   Qt::WindowMaximizeButtonHint |
+                   Qt::WindowCloseButtonHint);
+
     // Анимация головки
     m_caretAnimation = new QPropertyAnimation(ui->labelHeadArrow, "pos", this);
     m_caretAnimation->setDuration(180);

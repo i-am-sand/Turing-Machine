@@ -49,4 +49,11 @@ void MainWindow::on_pushButton_clicked()
     this->hide();
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    if (m_secondWindow)
+        m_secondWindow->close();
 
+    QApplication::quit();
+    QMainWindow::closeEvent(event);
+}
