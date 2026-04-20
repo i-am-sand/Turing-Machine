@@ -527,7 +527,6 @@ void SecondWindow::loadProgramFromTable()
     m_machine->clearProgram(); // Очищает старую программу
 
     QStringList states = generateStates(m_stateCount); // Создание списка состояний
-    m_machine->setStates(states);
 
     QList<QChar> alphabet = sortedAlphabetList(); // Список символов
 
