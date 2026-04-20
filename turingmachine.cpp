@@ -1,5 +1,6 @@
 #include "turingmachine.h"
 
+// Сразу создается хотя бы одно состояние
 TuringMachine::TuringMachine(QObject *parent)
     : QObject(parent)
 {

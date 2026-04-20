@@ -9,19 +9,24 @@ SecondWindow::SecondWindow(QWidget *parent)
     , m_timer(new QTimer(this))
     , m_caretAnimation(nullptr)
 {
+    // Создание элементов интерфейса
     ui->setupUi(this);
 
+    // Анимация головки
     m_caretAnimation = new QPropertyAnimation(ui->labelHeadArrow, "pos", this);
     m_caretAnimation->setDuration(180);
     m_caretAnimation->setEasingCurve(QEasingCurve::Linear);
 
+    // После окончания анимации вызов метода finishStepAnimation
     connect(m_caretAnimation, &QPropertyAnimation::finished,
             this, &SecondWindow::finishStepAnimation);
 
+    // Ставит головку на центральную ячейку ленты
     QPoint p = ui->labelHeadArrow->pos();
     p.setX(ui->labelCell5->x() + ui->labelCell5->width() / 2 - ui->labelHeadArrow->width() / 2);
     ui->labelHeadArrow->move(p);
 
+    // Отключение кнопок до ввода алфавитов и строки
     ui->lineEditInputWord->setEnabled(false);
     ui->pushButtonSetWord->setEnabled(false);
     ui->tableWidgetProgram->setEnabled(false);
@@ -35,6 +40,7 @@ SecondWindow::SecondWindow(QWidget *parent)
     ui->pushButtonSpeedUp->setEnabled(false);
     ui->pushButtonSpeedDown->setEnabled(false);
 
+    // При нажатии кнопки увеличивается/уменьшается число состояний и таблица строится заново
     connect(ui->pushButtonAddState, &QPushButton::clicked, this, [this]() {
         ++m_stateCount;
         rebuildProgramTable();
@@ -47,7 +53,7 @@ SecondWindow::SecondWindow(QWidget *parent)
             rebuildProgramTable();
         }
     });
-
+    // Присрабатывании таймера вызывется автоматический шаг
     connect(m_timer, &QTimer::timeout, this, &SecondWindow::onAutoStep);
     connect(m_machine, &TuringMachine::machineChanged, this, &SecondWindow::updateUiTextOnly);
     connect(m_machine, &TuringMachine::machineStopped, this, &SecondWindow::onMachineStopped);
@@ -62,16 +68,20 @@ SecondWindow::~SecondWindow()
 
 void SecondWindow::on_pushButton_2_clicked()
 {
-    this->close();
+    this->parentWidget()->show();
+    this->hide();
 }
 
 void SecondWindow::setAlphabets(const QSet<QChar>& tapeAlphabet,
                                 const QSet<QChar>& extraAlphabet)
 {
+    // Передача алфавита машине
     m_machine->setAlphabets(tapeAlphabet, extraAlphabet);
 
+    // Перестройка таблицы
     rebuildProgramTable();
 
+    // Разблокировка элементов интерфейса
     ui->tableWidgetProgram->setEnabled(true);
     ui->lineEditInputWord->setEnabled(true);
     ui->pushButtonSetWord->setEnabled(true);
@@ -87,8 +97,10 @@ void SecondWindow::setAlphabets(const QSet<QChar>& tapeAlphabet,
 
 void SecondWindow::on_pushButtonSetWord_clicked()
 {
+    // Считывание строки
     QString word = ui->lineEditInputWord->text();
 
+    // Проверка корректности строки и её запись на ленту
     if (!m_machine->setInputWord(word))
     {
         QMessageBox::warning(this, "Ошибка",
@@ -101,6 +113,7 @@ void SecondWindow::on_pushButtonSetWord_clicked()
     updateTapeLabels();
     placeCaretOverCell(m_caretScreenIndex);
 
+    // Разрешение запуска и шага
     ui->pushButtonStart->setEnabled(true);
     ui->pushButtonStep->setEnabled(true);
 
@@ -109,9 +122,11 @@ void SecondWindow::on_pushButtonSetWord_clicked()
 
 void SecondWindow::on_pushButtonStep_clicked()
 {
+    // Если предыдущий шаг не завершен (анимационно), нельзя начать след.
     if (m_stepInProgress)
         return;
 
+    // Текст из таблицы переводится во внутренние команды
     loadProgramFromTable();
 
     bool ok = m_machine->step();
@@ -124,6 +139,7 @@ void SecondWindow::on_pushButtonStep_clicked()
 
     updateUiTextOnly();
 
+    // Для анимации головки храним последний шаг
     QChar move = m_machine->lastMove();
 
     if (move == 'R')
@@ -148,6 +164,7 @@ void SecondWindow::on_pushButtonStart_clicked()
 {
     loadProgramFromTable();
 
+    // Есть ли остановки
     if (!m_machine->hasAnyHaltCommand())
     {
         QMessageBox::warning(this, "Ошибка",
@@ -189,6 +206,7 @@ void SecondWindow::on_pushButtonReset_clicked()
     updateUiTextOnly();
 }
 
+// Циклический запуск шагов по таймеру
 void SecondWindow::onAutoStep()
 {
     if (m_stepInProgress)
@@ -234,6 +252,7 @@ void SecondWindow::on_pushButtonSpeedUp_clicked()
     if (m_stepIntervalMs < 50)
         m_stepIntervalMs = 50;
 
+    // Если таймер активен, запускает его с новым интервалом
     if (m_timer->isActive())
         m_timer->start(m_stepIntervalMs);
 
@@ -301,23 +320,83 @@ QList<QChar> SecondWindow::sortedAlphabetList() const
 
 void SecondWindow::rebuildProgramTable()
 {
+    // Сохраняем старый алфавит
+    QMap<QString, QString> oldData;
+    QList<QChar> oldAlphabet;
+
+    if (ui->tableWidgetProgram->columnCount() > 0)
+    {
+        // Запоминаем символы из заголовков столбцов
+        for (int col = 0; col < ui->tableWidgetProgram->columnCount(); ++col)
+        {
+            QTableWidgetItem *headerItem = ui->tableWidgetProgram->horizontalHeaderItem(col);
+            if (headerItem && !headerItem->text().isEmpty())
+                oldAlphabet.append(headerItem->text()[0]);
+        }
+        // Запоминание строк
+        for (int row = 0; row < ui->tableWidgetProgram->rowCount(); ++row)
+        {
+            QString state = "q" + QString::number(row);
+
+            for (int col = 0; col < ui->tableWidgetProgram->columnCount(); ++col)
+            {
+                QTableWidgetItem *item = ui->tableWidgetProgram->item(row, col);
+                if (!item || item->text().trimmed().isEmpty())
+                    continue;
+
+                QString key = state + "|" + QString(oldAlphabet[col]);
+                oldData[key] = item->text();
+            }
+        }
+    }
+
+    // Новый список состояний и новый алфавит
     QStringList states = generateStates(m_stateCount);
     m_machine->setStates(states);
 
-    QList<QChar> alphabet = sortedAlphabetList();
+    QList<QChar> newAlphabet = sortedAlphabetList();
 
+    // Проверка
+    bool onlyExpansion = true;
+    for (QChar ch : oldAlphabet)
+    {
+        if (!newAlphabet.contains(ch))
+        {
+            onlyExpansion = false;
+            break;
+        }
+    }
+
+    // Перестраиваем таблицу
     ui->tableWidgetProgram->clear();
     ui->tableWidgetProgram->setRowCount(states.size());
-    ui->tableWidgetProgram->setColumnCount(alphabet.size());
+    ui->tableWidgetProgram->setColumnCount(newAlphabet.size());
 
     QStringList horizontalHeaders;
-    for (QChar ch : alphabet)
+    for (QChar ch : newAlphabet)
         horizontalHeaders << QString(ch);
 
     ui->tableWidgetProgram->setHorizontalHeaderLabels(horizontalHeaders);
     ui->tableWidgetProgram->setVerticalHeaderLabels(states);
-
     ui->tableWidgetProgram->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+    // Если было только расширение
+    if (onlyExpansion)
+    {
+        for (int row = 0; row < states.size(); ++row)
+        {
+            QString state = states[row];
+
+            for (int col = 0; col < newAlphabet.size(); ++col)
+            {
+                QString key = state + "|" + QString(newAlphabet[col]);
+                if (!oldData.contains(key))
+                    continue;
+
+                ui->tableWidgetProgram->setItem(row, col, new QTableWidgetItem(oldData[key]));
+            }
+        }
+    }
 }
 
 bool SecondWindow::parseCommandText(const QString &text,
@@ -332,7 +411,7 @@ bool SecondWindow::parseCommandText(const QString &text,
     QStringList parts = trimmed.split(',', Qt::KeepEmptyParts);
     for (QString &part : parts)
         part = part.trimmed();
-
+    // Значения по умолчанию
     cmd.writeSymbol = readSymbol;
     cmd.move = 'S';
     cmd.nextState = currentState;
@@ -340,20 +419,54 @@ bool SecondWindow::parseCommandText(const QString &text,
 
     if (parts.size() == 1)
     {
-        if (isMoveCommand(parts[0]))
+        QString one = parts[0].trimmed();
+
+        // Движение
+        if (isMoveCommand(one))
         {
-            cmd.move = parts[0].trimmed().toUpper()[0];
+            cmd.move = one.toUpper()[0];
             cmd.isValid = true;
             return true;
         }
-        cmd.nextState = parts[0];
+
+        // Остановка
+        if (one == "!")
+        {
+            cmd.nextState = "!";
+            cmd.move = 'S';
+            cmd.writeSymbol = readSymbol;
+            cmd.isValid = true;
+            return true;
+        }
+
+        // Просто переписать символ
+        if (one.size() == 1)
+        {
+            cmd.writeSymbol = one[0];
+            cmd.move = 'S';
+            cmd.nextState = currentState;
+            cmd.isValid = true;
+            return true;
+        }
+
+        // Просто состояние
+        cmd.nextState = one;
         cmd.isValid = !cmd.nextState.isEmpty();
         return cmd.isValid;
     }
 
+    if (parts[0].trimmed() == "!")
+    {
+        cmd.nextState = "!";
+        cmd.move = 'S';
+        cmd.writeSymbol = readSymbol;
+        cmd.isValid = true;
+        return true;
+    }
+
     if (parts.size() == 2)
     {
-        if (isMoveCommand(parts[0]))
+        if (isMoveCommand(parts[0])) // Сдвиг, состояние
         {
             cmd.move = parts[0].trimmed().toUpper()[0];
             cmd.nextState = parts[1].isEmpty() ? currentState : parts[1];
@@ -361,7 +474,7 @@ bool SecondWindow::parseCommandText(const QString &text,
             return true;
         }
 
-        if (parts[0].size() == 1 && isMoveCommand(parts[1]))
+        if (parts[0].size() == 1 && isMoveCommand(parts[1])) // Символ, сдвиг
         {
             cmd.writeSymbol = parts[0][0];
             cmd.move = parts[1].trimmed().toUpper()[0];
@@ -370,7 +483,7 @@ bool SecondWindow::parseCommandText(const QString &text,
             return true;
         }
 
-        if (parts[0].size() == 1)
+        if (parts[0].size() == 1) // Символ, состояние
         {
             cmd.writeSymbol = parts[0][0];
             cmd.move = 'S';
@@ -400,17 +513,17 @@ bool SecondWindow::parseCommandText(const QString &text,
         cmd.isValid = true;
         return true;
     }
-
     return false;
 }
+
 void SecondWindow::loadProgramFromTable()
 {
-    m_machine->clearProgram();
+    m_machine->clearProgram(); // Очищает старую программу
 
-    QStringList states = generateStates(m_stateCount);
+    QStringList states = generateStates(m_stateCount); // Создание списка состояний
     m_machine->setStates(states);
 
-    QList<QChar> alphabet = sortedAlphabetList();
+    QList<QChar> alphabet = sortedAlphabetList(); // Список символов
 
     for (int row = 0; row < ui->tableWidgetProgram->rowCount(); ++row)
     {
@@ -450,6 +563,7 @@ void SecondWindow::loadProgramFromTable()
 
 void SecondWindow::updateTapeLabels()
 {
+    // Массив указателей
     QLabel* labels[11] = {
         ui->labelCell0, ui->labelCell1, ui->labelCell2,
         ui->labelCell3, ui->labelCell4, ui->labelCell5,
@@ -457,9 +571,11 @@ void SecondWindow::updateTapeLabels()
         ui->labelCell9, ui->labelCell10
     };
 
+    // Индексы ячеек
     for (int i = 0; i < 11; ++i)
     {
         int tapeIndex = m_viewOffset + i;
+        // Запись символа в ячейку
         labels[i]->setText(QString(m_machine->symbolAt(tapeIndex)));
 
         if (i == m_caretScreenIndex)
@@ -473,12 +589,22 @@ void SecondWindow::updateTapeLabels()
     }
 }
 
+// Обновляет только надписи состояния, скорости и подсветку строки
+void SecondWindow::updateUiTextOnly()
+{
+    ui->labelCurrentState->setText("Состояние: " + m_machine->currentState());
+    ui->labelSpeed->setText("Скорость: " + QString::number(m_stepIntervalMs) + " мс");
+    highlightCurrentStateRow();
+}
+
+// Полностью обновляет интерфейс
 void SecondWindow::updateUi()
 {
     updateUiTextOnly();
     updateTapeLabels();
 }
 
+// Подсвет текущего состояния
 void SecondWindow::highlightCurrentStateRow()
 {
     QString current = m_machine->currentState();
@@ -502,6 +628,7 @@ void SecondWindow::highlightCurrentStateRow()
     }
 }
 
+// Блокировка интерфейса
 void SecondWindow::setEditingEnabled(bool enabled)
 {
     ui->lineEditInputWord->setEnabled(enabled);
@@ -519,6 +646,7 @@ void SecondWindow::setEditingEnabled(bool enabled)
     ui->pushButtonSpeedDown->setEnabled(true);
 }
 
+// Когда машина остановилась
 void SecondWindow::onMachineStopped(const QString &reason)
 {
     m_timer->stop();
@@ -534,25 +662,7 @@ void SecondWindow::onMachineStopped(const QString &reason)
 
     QMessageBox::information(this, "Остановка", reason);
 }
-
-void SecondWindow::updateUiTextOnly()
-{
-    ui->labelCurrentState->setText("Состояние: " + m_machine->currentState());
-    ui->labelSpeed->setText("Скорость: " + QString::number(m_stepIntervalMs) + " мс");
-    highlightCurrentStateRow();
-}
-
-
-void SecondWindow::onCaretAnimationFinished()
-{
-    updateTapeLabels();
-    QPoint p = ui->labelHeadArrow->pos();
-    p.setX(ui->labelCell5->x() + ui->labelCell5->width() / 2 - ui->labelHeadArrow->width() / 2);
-    ui->labelHeadArrow->move(p);
-
-    updateUiTextOnly();
-}
-
+// Анимация головки
 void SecondWindow::placeCaretOverCell(int index)
 {
     QLabel* labels[11] = {
@@ -570,7 +680,7 @@ void SecondWindow::placeCaretOverCell(int index)
     p.setX(cellTopLeft.x() + cell->width() / 2 - ui->labelHeadArrow->width() / 2);
     ui->labelHeadArrow->move(p);
 }
-
+// Анимация головки до нужной ячейки
 void SecondWindow::animateCaretToCell(int newIndex)
 {
     QLabel* labels[11] = {
@@ -594,6 +704,7 @@ void SecondWindow::animateCaretToCell(int newIndex)
     m_caretAnimation->start();
 }
 
+// Сдвиг ленты
 void SecondWindow::finishStepAnimation()
 {
     m_caretScreenIndex += m_pendingDirection;

@@ -9,6 +9,8 @@ class MainWindow;
 }
 QT_END_NAMESPACE
 
+class SecondWindow;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -24,5 +26,6 @@ private slots:
 
 private:
     Ui::MainWindow *ui;
+    SecondWindow *m_secondWindow;
 };
 #endif // MAINWINDOW_H

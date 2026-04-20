@@ -6,6 +6,7 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , m_secondWindow(new SecondWindow(this))
 {
     ui->setupUi(this);
 }
@@ -40,10 +41,12 @@ void MainWindow::on_pushButton_clicked()
         return;
     }
 
-    SecondWindow window(this);
-    window.setAlphabets(tapeAlphabet, extraAlphabet);
-    window.setModal(true);
-    window.exec();
+    m_secondWindow->setAlphabets(tapeAlphabet, extraAlphabet);
+    m_secondWindow->show();
+    m_secondWindow->raise();
+    m_secondWindow->activateWindow();
+
+    this->hide();
 }
 
 
