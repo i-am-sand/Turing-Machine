@@ -699,6 +699,7 @@ void SecondWindow::animateCaretToCell(int newIndex)
     endPos.setX(targetTopLeft.x() + targetCell->width() / 2 - ui->labelHeadArrow->width() / 2);
 
     m_caretAnimation->stop();
+    m_caretAnimation->setDuration(m_stepIntervalMs);
     m_caretAnimation->setStartValue(startPos);
     m_caretAnimation->setEndValue(endPos);
     m_caretAnimation->start();
