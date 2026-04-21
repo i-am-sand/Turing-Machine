@@ -65,7 +65,7 @@ bool TuringMachine::step() {
     QChar current = symbolAt(m_headPos);
     QString key = makeKey(m_currentState, current);
     if (!m_program.contains(key) || !m_program[key].isValid) {
-        emit machineStopped("Нет команды для текущего состояния и символа.");
+        emit machineStopped("<font color='black'>Нет команды для текущего состояния и символа.</font>");
         return false;
     }
     Command cmd = m_program[key];
@@ -78,7 +78,7 @@ bool TuringMachine::step() {
     m_currentState = cmd.nextState;
     emit machineChanged();
     if (m_currentState.trimmed().toLower() == "!") {
-        emit machineStopped("Машина остановилась.");
+        emit machineStopped("<font color='black'>Машина остановилась.</font>");
         return false;
     }
     return true;

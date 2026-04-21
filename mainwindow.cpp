@@ -37,7 +37,7 @@ void MainWindow::on_pushButton_clicked()
 
     if (tapeAlphabet.isEmpty()) {
         QMessageBox::warning(this, "Ошибка",
-                             "Алфавит ленты не должен быть пустым.");
+                             "<font color='black'>Алфавит ленты не должен быть пустым.</font>");
         return;
     }
 

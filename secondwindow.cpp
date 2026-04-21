@@ -109,8 +109,8 @@ void SecondWindow::on_pushButtonSetWord_clicked()
     // Проверка корректности строки и её запись на ленту
     if (!m_machine->setInputWord(word))
     {
-        QMessageBox::warning(this, "Ошибка",
-                             "Во входной строке есть символы, которых нет в алфавите ленты.");
+        QMessageBox::warning(this, "Ошибка","<font color='black'>"
+                "Во входной строке есть символы, которых нет в алфавите ленты.</font>");
         return;
     }
 
@@ -173,8 +173,8 @@ void SecondWindow::on_pushButtonStart_clicked()
     // Есть ли остановки
     if (!m_machine->hasAnyHaltCommand())
     {
-        QMessageBox::warning(this, "Ошибка",
-                             "Нельзя запускать машину, если нет ни одной остановки.");
+        QMessageBox::warning(this, "Ошибка","<font color='black'>"
+                                             "Нельзя запускать машину, если нет ни одной остановки.</font>");
         return;
     }
 
@@ -548,7 +548,7 @@ void SecondWindow::loadProgramFromTable()
             if (!parseCommandText(text, state, alphabet[col], cmd))
             {
                 QMessageBox::warning(this, "Ошибка",
-                                     QString("Некорректная команда в строке %1, столбце %2")
+                                     QString("<font color='black'>Некорректная команда в строке %1, столбце %2</font>")
                                          .arg(row + 1).arg(col + 1));
                 return;
             }
@@ -556,7 +556,7 @@ void SecondWindow::loadProgramFromTable()
             if (!m_machine->fullAlphabet().contains(cmd.writeSymbol))
             {
                 QMessageBox::warning(this, "Ошибка",
-                                     QString("Символ '%1' не входит в алфавит.")
+                                     QString("<font color='black'>Символ '%1' не входит в алфавит.</font>")
                                          .arg(cmd.writeSymbol));
                 return;
             }

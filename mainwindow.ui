@@ -19,6 +19,9 @@
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-color: rgb(255, 255, 255);</string>
+  </property>
   <widget class="QWidget" name="centralwidget">
    <widget class="QWidget" name="verticalLayoutWidget_3">
     <property name="geometry">
@@ -53,6 +56,9 @@
              <pointsize>15</pointsize>
             </font>
            </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(0, 0, 0);</string>
+           </property>
            <property name="text">
             <string>Алфавит строки:</string>
            </property>
@@ -76,6 +82,9 @@
             <font>
              <pointsize>20</pointsize>
             </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(0, 0, 0);</string>
            </property>
           </widget>
          </item>
@@ -102,6 +111,9 @@
              <pointsize>15</pointsize>
             </font>
            </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(0, 0, 0);</string>
+           </property>
            <property name="text">
             <string>Алфавит доп. символов:</string>
            </property>
@@ -125,6 +137,9 @@
             <font>
              <pointsize>20</pointsize>
             </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">color: rgb(0, 0, 0);</string>
            </property>
           </widget>
          </item>
@@ -150,6 +165,10 @@
         <font>
          <pointsize>15</pointsize>
         </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background-color: rgb(220, 138, 221);
+color: rgb(0, 0, 0);</string>
        </property>
        <property name="text">
         <string>Задать алфавиты</string>
